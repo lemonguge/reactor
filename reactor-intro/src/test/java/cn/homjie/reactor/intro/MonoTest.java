@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * @author jiehong.jh
@@ -47,5 +48,27 @@ public class MonoTest {
     @Test
     void create() {
         Mono.create(sink -> sink.success("Hello")).subscribe(v -> log.info("value: {}", v));
+    }
+
+    @Test
+    void biz() {
+        Mono<String> mono = Mono.when(
+            Mono.fromCallable(() -> {
+                log.info("request biz1");
+                TimeUnit.SECONDS.sleep(1);
+                log.info("response biz1");
+                return "biz1";
+            }).subscribeOn(Schedulers.elastic()),
+            Mono.fromCallable(() -> {
+                log.info("request biz2");
+                TimeUnit.SECONDS.sleep(2);
+                log.info("response biz2");
+                return "biz2";
+            }).subscribeOn(Schedulers.elastic())
+        ).then(Mono.just("ok"));
+
+        log.info("start..");
+        log.info("value: {}", mono.block());
+        log.info("end..");
     }
 }

@@ -576,10 +576,14 @@ public class FluxTest {
             Flux.fromIterable(Arrays.asList("blue", "green", "orange", "purple"))
                 .doOnNext(log::info)
                 .compose(filterAndMap);
+                //.transform(filterAndMap);
 
         // 意味着它对每一个 subscription 可以生成不同的操作链（通过维护一些状态值）
+        log.info("ai: "+ai.get());
         composedFlux.subscribe(d -> log.info("Subscriber 1 to Composed MapAndFilter: {}", d));
+        log.info("ai: "+ai.get());
         composedFlux.subscribe(d -> log.info("Subscriber 2 to Composed MapAndFilter: {}", d));
+        log.info("ai: "+ai.get());
     }
 
     @Test
@@ -695,4 +699,29 @@ public class FluxTest {
             });
         log.info("elements: {}", elements);
     }
+
+    @Test
+    public void publish() throws InterruptedException {
+        Flux<Long> flux = Flux.interval(Duration.ofMillis(500))
+            .publish(3)
+            .autoConnect(3);
+            //.refCount(3, Duration.ofMillis(2000));
+
+        flux.subscribe(v -> log.info("S1: {}", v));
+        TimeUnit.SECONDS.sleep(1);
+        flux
+            .take(3)
+            .doFinally(signalType -> log.info("S2 signal type: {}", signalType))
+            .subscribe(v -> log.info("S2: {}", v));
+        flux.subscribe(v -> log.info("S3: {}", v));
+        log.info("start connect..");
+        TimeUnit.SECONDS.sleep(3);
+        log.info("t5");
+        flux
+            .doFinally(signalType -> log.info("S4 signal type: {}", signalType))
+            .subscribe(v -> log.info("S4: {}", v));
+        log.info("t6");
+        TimeUnit.SECONDS.sleep(3);
+    }
+
 }
